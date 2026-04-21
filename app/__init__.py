@@ -1,0 +1,1 @@
+"""Svet application package."""

@@ -1,0 +1,27 @@
+# Bytecode and caches (created by Python when you import modules or run pytest — not committed by the agent on purpose)
+__pycache__/
+*.py[cod]
+*$py.class
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+
+# Virtual environments
+.venv/
+venv/
+ENV/
+
+# Local env and secrets
+.env
+*.env.local
+
+# IDE / OS
+.idea/
+.vscode/
+*.swp
+.DS_Store
+
+# SQLite / local DB files
+*.db
