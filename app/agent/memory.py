@@ -6,7 +6,7 @@ from datetime import UTC, datetime
 from loguru import logger
 from qdrant_client import AsyncQdrantClient
 from qdrant_client.http import models as qmodels
-from sentence_transformers import SentenceTransformer
+from fastembed import TextEmbedding
 
 from app.config import get_settings
 
@@ -14,18 +14,18 @@ from app.config import get_settings
 class AgentMemory:
     """Qdrant-backed episodic memory per user."""
 
-    _model: SentenceTransformer | None = None
+    _model: TextEmbedding | None = None
 
     def __init__(self) -> None:
         self._settings = get_settings()
         self._client = AsyncQdrantClient(url=self._settings.qdrant_url)
 
     @classmethod
-    async def _get_model(cls) -> SentenceTransformer:
+    async def _get_model(cls) -> TextEmbedding:
         if cls._model is None:
 
-            def _load() -> SentenceTransformer:
-                return SentenceTransformer("sentence-transformers/all-MiniLM-L6-v2")
+            def _load() -> TextEmbedding:
+                return TextEmbedding(model_name="BAAI/bge-small-en-v1.5")
 
             cls._model = await asyncio.to_thread(_load)
         return cls._model
@@ -41,8 +41,13 @@ class AgentMemory:
 
     async def load(self, user_id: str, query: str) -> list[str]:
         model = await self._get_model()
-        vec = await asyncio.to_thread(model.encode, query)
-        vector = vec.tolist() if hasattr(vec, "tolist") else list(vec)
+        
+        def _embed() -> list[float]:
+            embeddings = list(model.embed([query]))
+            v = embeddings[0]
+            return v.tolist() if hasattr(v, "tolist") else list(v)
+
+        vector = await asyncio.to_thread(_embed)
         await self._ensure_collection(len(vector))
 
         filt = qmodels.Filter(
@@ -71,8 +76,13 @@ class AgentMemory:
 
     async def save(self, user_id: str, prompt: str, result: str) -> None:
         model = await self._get_model()
-        vec = await asyncio.to_thread(model.encode, prompt)
-        vector = vec.tolist() if hasattr(vec, "tolist") else list(vec)
+
+        def _embed() -> list[float]:
+            embeddings = list(model.embed([prompt]))
+            v = embeddings[0]
+            return v.tolist() if hasattr(v, "tolist") else list(v)
+
+        vector = await asyncio.to_thread(_embed)
         await self._ensure_collection(len(vector))
 
         point_id = hash((user_id, prompt, datetime.now(tz=UTC).isoformat())) & ((1 << 63) - 1)

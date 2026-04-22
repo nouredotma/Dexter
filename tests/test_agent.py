@@ -211,8 +211,9 @@ async def test_memory_save_and_load(monkeypatch):
     monkeypatch.setattr("app.agent.memory.AsyncQdrantClient", lambda *a, **k: fake)
 
     class FakeModel:
-        def encode(self, text: str):
-            return [0.0] * 384
+        def embed(self, texts):
+            for _ in texts:
+                yield [0.0] * 384
 
     async def fake_get_model(cls):
         return FakeModel()

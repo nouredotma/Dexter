@@ -14,6 +14,9 @@ COPY requirements.txt /app/requirements.txt
 RUN pip install --upgrade pip \
     && pip install -r /app/requirements.txt
 
+# Pre-download the FastEmbed model so it's baked into the image
+RUN python -c "from fastembed import TextEmbedding; TextEmbedding(model_name='BAAI/bge-small-en-v1.5')"
+
 COPY app /app/app
 
 RUN python -m playwright install chromium \
