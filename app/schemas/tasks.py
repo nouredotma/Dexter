@@ -8,7 +8,7 @@ from app.db.models import TaskStatus
 
 
 class TaskCreate(BaseModel):
-    prompt: str = Field(min_length=1)
+    prompt: str = Field(min_length=1, max_length=12000)
     llm_provider: str | None = None
     attachments: list[dict[str, Any]] | None = Field(
         default=None,

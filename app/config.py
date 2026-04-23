@@ -54,6 +54,18 @@ class Settings(BaseSettings):
     smtp_user: str | None = Field(None, alias="SMTP_USER")
     smtp_password: str | None = Field(None, alias="SMTP_PASSWORD")
     smtp_from: str = Field("noreply@localhost", alias="SMTP_FROM")
+    imap_host: str | None = Field(None, alias="IMAP_HOST")
+    imap_port: int = Field(993, alias="IMAP_PORT")
+    imap_user: str | None = Field(None, alias="IMAP_USER")
+    imap_password: str | None = Field(None, alias="IMAP_PASSWORD")
+
+    max_prompt_chars: int = Field(12000, alias="MAX_PROMPT_CHARS")
+    max_tool_input_chars: int = Field(6000, alias="MAX_TOOL_INPUT_CHARS")
+    rate_limit_per_minute: int = Field(60, alias="RATE_LIMIT_PER_MINUTE")
+
+    cors_origins: str = Field("*", alias="CORS_ORIGINS")
+    google_calendar_access_token: str | None = Field(None, alias="GOOGLE_CALENDAR_ACCESS_TOKEN")
+    google_calendar_id: str = Field("primary", alias="GOOGLE_CALENDAR_ID")
 
 
 @lru_cache

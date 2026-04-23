@@ -6,6 +6,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.agent.prompt_guard import validate_user_prompt
 from app.api.middleware.auth import get_current_user
 from app.api.middleware.rate_limit import rate_limit
 from app.db.models import Task, TaskStatus, User
@@ -24,6 +25,10 @@ async def create_task(
     db: AsyncSession = Depends(get_db),
     user: User = Depends(get_current_user),
 ) -> Task:
+    is_safe, guard_reason = validate_user_prompt(payload.prompt)
+    if not is_safe:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=guard_reason)
+
     llm_provider = payload.llm_provider or user.llm_provider
     task = Task(
         user_id=user.id,

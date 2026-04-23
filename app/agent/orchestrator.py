@@ -14,6 +14,7 @@ from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from app.agent.llm import LLMClient
 from app.agent.memory import AgentMemory
+from app.agent.prompt_guard import validate_tool_input
 from app.agent.tools import TOOLS_REGISTRY, get_tools_schema
 from app.config import get_settings
 from app.db.models import Task
@@ -140,12 +141,17 @@ async def run(
             if tool_name not in TOOLS_REGISTRY:
                 tool_output = f"error: unknown tool '{tool_name}'"
             else:
-                tool_fn = TOOLS_REGISTRY[tool_name]
-                try:
-                    tool_output = await _call_tool(tool_fn, tool_input)
-                except Exception as exc:
-                    logger.exception("Tool execution failed")
-                    tool_output = f"error: tool raised {exc}"
+                ok, reason = validate_tool_input(tool_name, tool_input)
+                if not ok:
+                    logger.warning("Prompt guard blocked tool '{}' for task {}", tool_name, task_id)
+                    tool_output = f"error: blocked by prompt guard: {reason}"
+                else:
+                    tool_fn = TOOLS_REGISTRY[tool_name]
+                    try:
+                        tool_output = await _call_tool(tool_fn, tool_input)
+                    except Exception as exc:
+                        logger.exception("Tool execution failed")
+                        tool_output = f"error: tool raised {exc}"
 
             call_id = secrets.token_hex(12)
             messages.append(

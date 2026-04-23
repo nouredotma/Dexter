@@ -4,6 +4,10 @@ import json
 from datetime import UTC, datetime, timedelta
 from zoneinfo import ZoneInfo, available_timezones
 
+import httpx
+
+from app.config import get_settings
+
 
 def _parse_iso_or_common(value: str) -> datetime:
     """Parse ISO-8601 or a few common formats; naive datetimes are treated as UTC."""
@@ -31,6 +35,7 @@ async def calendar_tool(
     action: str,
     datetime_str: str | None = None,
     datetime_str_b: str | None = None,
+    text: str | None = None,
     timezone: str = "UTC",
     days: int = 0,
     hours: int = 0,
@@ -48,6 +53,8 @@ async def calendar_tool(
     - diff_minutes: whole minutes from `datetime_str` to `datetime_str_b`.
     - weekday: English weekday name for `datetime_str` (UTC calendar date).
     - list_timezones: optional filter substring in `datetime_str`; returns up to 50 IANA names (JSON array).
+    - calendar_read: reads upcoming Google Calendar events (uses GOOGLE_CALENDAR_ACCESS_TOKEN).
+    - calendar_create: creates Google Calendar event; requires datetime_str(start), datetime_str_b(end), text(summary).
     """
     act = action.lower().strip()
 
@@ -98,7 +105,57 @@ async def calendar_tool(
             zones = zones[:50]
         return json.dumps(zones, ensure_ascii=False)
 
+    if act == "calendar_read":
+        settings = get_settings()
+        if not settings.google_calendar_access_token:
+            return "error: GOOGLE_CALENDAR_ACCESS_TOKEN is not configured"
+        headers = {"Authorization": f"Bearer {settings.google_calendar_access_token}"}
+        params = {
+            "singleEvents": "true",
+            "orderBy": "startTime",
+            "maxResults": 10,
+            "timeMin": datetime.now(tz=UTC).isoformat(),
+        }
+        url = f"https://www.googleapis.com/calendar/v3/calendars/{settings.google_calendar_id}/events"
+        async with httpx.AsyncClient(timeout=30.0) as client:
+            resp = await client.get(url, headers=headers, params=params)
+        if resp.status_code >= 400:
+            return f"error: calendar read failed ({resp.status_code}) {resp.text[:500]}"
+        items = (resp.json() or {}).get("items", [])
+        if not items:
+            return "No upcoming events."
+        lines: list[str] = []
+        for item in items[:10]:
+            start = (item.get("start") or {}).get("dateTime") or (item.get("start") or {}).get("date")
+            lines.append(f"- {item.get('summary', '(no title)')} @ {start}")
+        return "\n".join(lines)
+
+    if act == "calendar_create":
+        settings = get_settings()
+        if not settings.google_calendar_access_token:
+            return "error: GOOGLE_CALENDAR_ACCESS_TOKEN is not configured"
+        if not datetime_str or not datetime_str_b or not text:
+            return "error: datetime_str(start), datetime_str_b(end), and text(summary) are required"
+        start_iso = _parse_iso_or_common(datetime_str).isoformat()
+        end_iso = _parse_iso_or_common(datetime_str_b).isoformat()
+        headers = {
+            "Authorization": f"Bearer {settings.google_calendar_access_token}",
+            "Content-Type": "application/json",
+        }
+        body = {
+            "summary": text,
+            "start": {"dateTime": start_iso},
+            "end": {"dateTime": end_iso},
+        }
+        url = f"https://www.googleapis.com/calendar/v3/calendars/{settings.google_calendar_id}/events"
+        async with httpx.AsyncClient(timeout=30.0) as client:
+            resp = await client.post(url, headers=headers, json=body)
+        if resp.status_code >= 400:
+            return f"error: calendar create failed ({resp.status_code}) {resp.text[:500]}"
+        event = resp.json() or {}
+        return f"success: event created id={event.get('id')} link={event.get('htmlLink')}"
+
     return (
         f"error: unknown action {action!r}. "
-        "Supported: now, parse, to_timezone, add, diff_minutes, weekday, list_timezones"
+        "Supported: now, parse, to_timezone, add, diff_minutes, weekday, list_timezones, calendar_read, calendar_create"
     )

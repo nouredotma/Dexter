@@ -5,6 +5,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from loguru import logger
 
 from app.api.routes.auth import router as auth_router
+from app.api.routes.admin import router as admin_router
 from app.api.routes.tasks import router as tasks_router
 from app.api.routes.users import router as users_router
 from app.api.routes.ws import router as ws_router
@@ -39,11 +40,12 @@ def create_app() -> FastAPI:
 
     app = FastAPI(title="Svet", lifespan=lifespan)
 
-    if settings.environment == "dev":
+    configured_origins = [o.strip() for o in settings.cors_origins.split(",") if o.strip()]
+    if settings.environment == "dev" and settings.cors_origins == "*":
         cors_origins = ["*"]
         cors_credentials = False
     else:
-        cors_origins = ["https://example.com"]
+        cors_origins = configured_origins or ["https://example.com"]
         cors_credentials = True
 
     app.add_middleware(
@@ -57,6 +59,7 @@ def create_app() -> FastAPI:
     app.include_router(auth_router)
     app.include_router(users_router)
     app.include_router(tasks_router)
+    app.include_router(admin_router)
     app.include_router(ws_router, prefix="/ws")
 
     @app.get("/health")

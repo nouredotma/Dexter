@@ -4,7 +4,7 @@ from typing import Any, Awaitable, Callable
 
 from app.agent.tools.browser import browser_tool
 from app.agent.tools.calendar import calendar_tool
-from app.agent.tools.email import send_email_tool
+from app.agent.tools.email import read_email_tool, send_email_tool
 from app.agent.tools.files import read_file_tool, write_file_tool
 from app.agent.tools.http_request import http_request_tool
 from app.agent.tools.search import web_search_tool
@@ -16,6 +16,7 @@ TOOLS_REGISTRY: dict[str, Callable[..., Awaitable[str]]] = {
     "read_file_tool": read_file_tool,
     "write_file_tool": write_file_tool,
     "send_email_tool": send_email_tool,
+    "read_email_tool": read_email_tool,
     "http_request_tool": http_request_tool,
 }
 
@@ -59,10 +60,13 @@ def get_tools_schema() -> list[dict[str, Any]]:
                             "diff_minutes",
                             "weekday",
                             "list_timezones",
+                            "calendar_read",
+                            "calendar_create",
                         ],
                     },
                     "datetime_str": {"type": "string"},
                     "datetime_str_b": {"type": "string"},
+                    "text": {"type": "string"},
                     "timezone": {"type": "string", "default": "UTC"},
                     "days": {"type": "integer", "default": 0},
                     "hours": {"type": "integer", "default": 0},
@@ -114,6 +118,16 @@ def get_tools_schema() -> list[dict[str, Any]]:
                     "body": {"type": "string"},
                 },
                 "required": ["to", "subject", "body"],
+            },
+        },
+        {
+            "name": "read_email_tool",
+            "description": "Read recent inbox emails via IMAP using server-configured credentials.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "limit": {"type": "integer", "default": 5},
+                },
             },
         },
         {
