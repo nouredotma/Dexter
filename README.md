@@ -1,7 +1,3 @@
-<p align="center">
-  <img src="https://github.com/user-attachments/assets/128d647a-da2d-4a53-a7b1-a88af5cd2d12" alt="Dexter Logo" width="200">
-</p>
-
 # Dexter
 
 Personal local AI agent built with FastAPI, PostgreSQL, Redis, Taskiq, and Qdrant.
