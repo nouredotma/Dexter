@@ -56,9 +56,10 @@ jobs:
           SECRET_KEY: ci-secret-key-ci-secret-key-ci-secret-key
           ACCESS_TOKEN_EXPIRE_MINUTES: "30"
           REFRESH_TOKEN_EXPIRE_DAYS: "7"
-          DEFAULT_LLM_PROVIDER: openai
-          OPENAI_API_KEY: test-openai
-          ANTHROPIC_API_KEY: test-anthropic
+          DEFAULT_LLM_PROVIDER: gemini
+          LLM_API_KEY: test-llm
+          LLM_MODEL: gemini-2.5-flash
+          LLM_BASE_URL: https://generativelanguage.googleapis.com/v1beta/openai/
           ENVIRONMENT: dev
         run: pytest -q
 

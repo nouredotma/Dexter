@@ -51,10 +51,14 @@ The API listens on `http://localhost:8000`.
 3. Each tool call executes an async Python tool, appends the tool output to the conversation, and logs structured steps on the task row.
 4. When the model returns text, the final answer is stored, usage is logged, and memory is updated.
 
-### LLM routing (`DEFAULT_LLM_PROVIDER=auto` by default)
+### LLM configuration
 
-- **Cerebras** (OpenAI-compatible API, `CEREBRAS_*`): used for short, text-only turns when the estimated input context is at or below `LLM_LONG_CONTEXT_THRESHOLD_TOKENS` (default **8000** estimated tokens).
-- **Gemini 2.5 Flash** (Google AI Studio, OpenAI-compatible `GOOGLE_AI_API_KEY` + `GEMINI_MODEL`): used when the task includes **vision** (`image_url` blocks in `POST /tasks` `attachments`, multimodal message content, or obvious image URLs / `data:image` in text), or when estimated context is **strictly above** that threshold.
+- Svet uses a single OpenAI-compatible LLM provider configured through env values.
+- Default setup is **Gemini 2.5 Flash** with:
+  - `LLM_API_KEY`
+  - `LLM_MODEL=gemini-2.5-flash`
+  - `LLM_BASE_URL=https://generativelanguage.googleapis.com/v1beta/openai/`
+- To switch providers later, update `LLM_API_KEY`, `LLM_MODEL`, and `LLM_BASE_URL` only.
 - Optional **`attachments`** on task creation accepts OpenAI-style multimodal parts (for example `{"type":"image_url","image_url":{"url":"https://..."}}`).
 
 ## Tests

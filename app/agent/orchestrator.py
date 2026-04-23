@@ -26,18 +26,6 @@ class OrchestratorResult:
     tokens_used: int
     steps: list[dict[str, Any]]
 
-
-def _attachments_have_images(attachments: list[dict[str, Any]] | None) -> bool:
-    if not attachments:
-        return False
-    for item in attachments:
-        if not isinstance(item, dict):
-            continue
-        if item.get("type") == "image_url":
-            return True
-    return False
-
-
 def _build_user_message(prompt: str, attachments: list[dict[str, Any]] | None) -> dict[str, Any]:
     if not attachments:
         return {"role": "user", "content": prompt}
@@ -58,19 +46,11 @@ async def run(
     attachments: list[dict[str, Any]] | None = None,
 ) -> OrchestratorResult:
     settings = get_settings()
-    provider = llm_provider or settings.default_llm_provider
 
     llm = LLMClient(
-        provider=provider,
-        anthropic_api_key=settings.anthropic_api_key,
-        openai_api_key=settings.openai_api_key,
-        google_ai_api_key=settings.google_ai_api_key,
-        cerebras_api_key=settings.cerebras_api_key,
-        gemini_model=settings.gemini_model,
-        cerebras_model=settings.cerebras_model,
-        gemini_openai_base_url=settings.gemini_openai_base_url,
-        cerebras_openai_base_url=settings.cerebras_openai_base_url,
-        long_context_threshold_tokens=settings.llm_long_context_threshold_tokens,
+        api_key=settings.llm_api_key,
+        model=settings.llm_model,
+        base_url=settings.llm_base_url,
     )
 
     memory = AgentMemory()
@@ -85,8 +65,6 @@ async def run(
         "If you can answer directly with high confidence, respond with plain text only.\n\n"
         f"Memory context:\n{memory_block}"
     )
-
-    explicit_vision = _attachments_have_images(attachments)
 
     messages: list[dict[str, Any]] = [
         {"role": "system", "content": system_prompt},
@@ -108,11 +86,7 @@ async def run(
                     }
                 )
 
-            response = await llm.call(
-                messages,
-                llm_tools,
-                explicit_attachments_have_images=explicit_vision,
-            )
+            response = await llm.call(messages, llm_tools)
             tokens_used += int(response.input_tokens + response.output_tokens)
 
             if response.type == "text":

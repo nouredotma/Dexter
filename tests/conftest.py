@@ -14,9 +14,10 @@ os.environ.setdefault("QDRANT_URL", "http://localhost:6333")
 os.environ.setdefault("SECRET_KEY", "unit-test-secret-unit-test-secret-unit-test-secret")
 os.environ.setdefault("ACCESS_TOKEN_EXPIRE_MINUTES", "30")
 os.environ.setdefault("REFRESH_TOKEN_EXPIRE_DAYS", "7")
-os.environ.setdefault("DEFAULT_LLM_PROVIDER", "openai")
-os.environ.setdefault("ANTHROPIC_API_KEY", "test-anthropic")
-os.environ.setdefault("OPENAI_API_KEY", "test-openai")
+os.environ.setdefault("DEFAULT_LLM_PROVIDER", "gemini")
+os.environ.setdefault("LLM_API_KEY", "test-llm")
+os.environ.setdefault("LLM_MODEL", "gemini-2.5-flash")
+os.environ.setdefault("LLM_BASE_URL", "https://generativelanguage.googleapis.com/v1beta/openai/")
 os.environ.setdefault("ENVIRONMENT", "dev")
 
 from app.api.middleware.auth import create_access_token, hash_password  # noqa: E402

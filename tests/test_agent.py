@@ -11,29 +11,7 @@ from app.agent.orchestrator import run as run_orchestrator
 
 
 @pytest.mark.asyncio
-async def test_llm_client_anthropic():
-    fake_message = MagicMock()
-    fake_message.content = [
-        MagicMock(model_dump=lambda: {"type": "text", "text": "hello"}),
-    ]
-    fake_message.usage = MagicMock(input_tokens=10, output_tokens=2)
-
-    client_obj = MagicMock()
-    client_obj.messages.create = AsyncMock(return_value=fake_message)
-
-    with patch("app.agent.llm.AsyncAnthropic", return_value=client_obj):
-        llm = LLMClient(provider="anthropic", anthropic_api_key="x", openai_api_key=None)
-        resp = await llm.call(
-            [{"role": "user", "content": "hi"}],
-            [{"name": "noop", "description": "noop", "parameters": {"type": "object"}}],
-        )
-
-    assert resp.type == "text"
-    assert resp.text == "hello"
-
-
-@pytest.mark.asyncio
-async def test_llm_client_openai():
+async def test_llm_client_openai_compatible():
     fake_choice = MagicMock()
     fake_choice.message = MagicMock(content="ok", tool_calls=None)
 
@@ -45,7 +23,7 @@ async def test_llm_client_openai():
     fake_client.chat.completions.create = AsyncMock(return_value=fake_completion)
 
     with patch("app.agent.llm.AsyncOpenAI", return_value=fake_client):
-        llm = LLMClient(provider="openai", anthropic_api_key=None, openai_api_key="x")
+        llm = LLMClient(api_key="x", model="gemini-2.5-flash", base_url="https://example.com/v1/")
         resp = await llm.call([{"role": "user", "content": "hi"}], [])
 
     assert resp.type == "text"
@@ -54,7 +32,7 @@ async def test_llm_client_openai():
 
 @pytest.mark.asyncio
 async def test_orchestrator_text_response(monkeypatch):
-    async def fake_call(self, messages, tools, explicit_attachments_have_images: bool = False):
+    async def fake_call(self, messages, tools):
         return LLMResponse(type="text", text="final answer", input_tokens=1, output_tokens=2)
 
     monkeypatch.setattr(LLMClient, "call", fake_call)
@@ -115,7 +93,7 @@ async def test_orchestrator_text_response(monkeypatch):
 async def test_orchestrator_tool_call(monkeypatch):
     calls = {"n": 0}
 
-    async def fake_call(self, messages, tools, explicit_attachments_have_images: bool = False):
+    async def fake_call(self, messages, tools):
         if calls["n"] == 0:
             calls["n"] += 1
             return LLMResponse(

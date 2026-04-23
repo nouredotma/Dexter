@@ -16,31 +16,19 @@ class Settings(BaseSettings):
     qdrant_url: str = Field(..., alias="QDRANT_URL")
     qdrant_collection_name: str = Field("svet_memory", alias="QDRANT_COLLECTION_NAME")
 
-    anthropic_api_key: str | None = Field(None, alias="ANTHROPIC_API_KEY")
-    openai_api_key: str | None = Field(None, alias="OPENAI_API_KEY")
-
-    # Google AI Studio (Gemini) — OpenAI-compatible endpoint; used for vision & long context when routing=auto
-    google_ai_api_key: str | None = Field(None, alias="GOOGLE_AI_API_KEY")
-    gemini_model: str = Field("gemini-2.5-flash", alias="GEMINI_MODEL")
-    gemini_openai_base_url: str = Field(
+    llm_api_key: str | None = Field(None, alias="LLM_API_KEY")
+    llm_model: str = Field("gemini-2.5-flash", alias="LLM_MODEL")
+    llm_base_url: str = Field(
         "https://generativelanguage.googleapis.com/v1beta/openai/",
-        alias="GEMINI_OPENAI_BASE_URL",
+        alias="LLM_BASE_URL",
     )
-
-    # Cerebras Inference (OpenAI-compatible) — used for short / low-context steps when routing=auto
-    cerebras_api_key: str | None = Field(None, alias="CEREBRAS_API_KEY")
-    cerebras_model: str = Field("llama3.1-8b", alias="CEREBRAS_MODEL")
-    cerebras_openai_base_url: str = Field("https://api.cerebras.ai/v1/", alias="CEREBRAS_OPENAI_BASE_URL")
-
-    # Estimated input tokens (heuristic: ~4 chars/token); above this → Gemini when provider=auto
-    llm_long_context_threshold_tokens: int = Field(8000, alias="LLM_LONG_CONTEXT_THRESHOLD_TOKENS")
 
     secret_key: str = Field(..., alias="SECRET_KEY")
     algorithm: str = "HS256"
     access_token_expire_minutes: int = Field(30, alias="ACCESS_TOKEN_EXPIRE_MINUTES")
     refresh_token_expire_days: int = Field(7, alias="REFRESH_TOKEN_EXPIRE_DAYS")
 
-    default_llm_provider: str = Field("auto", alias="DEFAULT_LLM_PROVIDER")
+    default_llm_provider: str = Field("gemini", alias="DEFAULT_LLM_PROVIDER")
 
     sentry_dsn: str | None = Field(None, alias="SENTRY_DSN")
     environment: str = Field("dev", alias="ENVIRONMENT")
