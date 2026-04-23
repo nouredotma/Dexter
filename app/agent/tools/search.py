@@ -74,7 +74,4 @@ async def web_search_tool(query: str) -> str:
         if len(deduped) >= 5:
             break
 
-    lines = []
-    for item in deduped:
-        lines.append(f"- {item.get('title')}\n  {item.get('url')}\n  {item.get('snippet')}")
-    return "\n".join(lines) if lines else "No results found."
+    return json.dumps(deduped, ensure_ascii=False)

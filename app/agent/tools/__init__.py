@@ -32,8 +32,8 @@ def get_tools_schema() -> list[dict[str, Any]]:
                     "url": {"type": "string"},
                     "action": {
                         "type": "string",
-                        "enum": ["navigate", "click", "fill", "extract"],
-                        "description": "navigate loads URL and returns text; click/fill/extract operate on current page",
+                        "enum": ["navigate", "click", "fill", "extract", "wait_for", "screenshot"],
+                        "description": "navigate loads URL; click/fill/extract/wait_for/screenshot operate on a persisted page session",
                     },
                     "selector": {"type": "string"},
                     "text": {"type": "string"},
@@ -62,6 +62,8 @@ def get_tools_schema() -> list[dict[str, Any]]:
                             "list_timezones",
                             "calendar_read",
                             "calendar_create",
+                            "calendar_update",
+                            "calendar_delete",
                         ],
                     },
                     "datetime_str": {"type": "string"},
@@ -132,12 +134,12 @@ def get_tools_schema() -> list[dict[str, Any]]:
         },
         {
             "name": "http_request_tool",
-            "description": "Perform an HTTP GET or POST request with optional JSON body.",
+            "description": "Perform an HTTP request with retries and safety checks against private/internal hosts.",
             "parameters": {
                 "type": "object",
                 "properties": {
                     "url": {"type": "string"},
-                    "method": {"type": "string", "enum": ["GET", "POST"], "default": "GET"},
+                    "method": {"type": "string", "enum": ["GET", "POST", "PUT", "PATCH", "DELETE"], "default": "GET"},
                     "headers": {"type": "object"},
                     "body": {"type": "object"},
                 },

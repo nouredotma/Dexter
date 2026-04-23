@@ -20,7 +20,7 @@ async def send_email_tool(to: str, subject: str, body: str) -> str:
         msg["Subject"] = subject
         msg.set_content(body)
 
-        with smtplib.SMTP(settings.smtp_host, int(settings.smtp_port)) as smtp:
+        with smtplib.SMTP(settings.smtp_host, int(settings.smtp_port), timeout=20) as smtp:
             smtp.starttls()
             smtp.login(settings.smtp_user, settings.smtp_password)
             smtp.send_message(msg)
@@ -42,6 +42,18 @@ async def read_email_tool(limit: int = 5) -> str:
         return "error: IMAP is not configured"
 
     safe_limit = max(1, min(int(limit), 20))
+
+    def _first_text_body(message) -> str:
+        if message.is_multipart():
+            for part in message.walk():
+                if part.get_content_type() == "text/plain":
+                    payload = part.get_payload(decode=True)
+                    if payload:
+                        return payload.decode(errors="replace")
+        payload = message.get_payload(decode=True)
+        if payload:
+            return payload.decode(errors="replace")
+        return ""
 
     def _read() -> str:
         with imaplib.IMAP4_SSL(settings.imap_host, int(settings.imap_port)) as client:
@@ -66,7 +78,11 @@ async def read_email_tool(limit: int = 5) -> str:
                 subject = str(message.get("subject", "(no subject)"))
                 from_addr = str(message.get("from", "(unknown)"))
                 date_str = str(message.get("date", ""))
-                lines.append(f"- From: {from_addr}\n  Subject: {subject}\n  Date: {date_str}")
+                snippet = _first_text_body(message).strip().replace("\r", " ").replace("\n", " ")
+                snippet = snippet[:200] + ("..." if len(snippet) > 200 else "")
+                lines.append(
+                    f"- From: {from_addr}\n  Subject: {subject}\n  Date: {date_str}\n  Snippet: {snippet or '(empty)'}"
+                )
             return "\n".join(lines) if lines else "No emails found."
 
     try:
