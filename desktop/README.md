@@ -7,12 +7,12 @@
 
 ## Installation
 ```bash
-pip install -r desktop/requirements.txt
+py -3 -m pip install -r desktop/requirements.txt
 ```
 
 ## Running
 ```bash
-python desktop/main.py
+py -3 desktop/main.py
 ```
 
 ## First Time Setup
