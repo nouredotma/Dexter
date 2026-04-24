@@ -30,7 +30,7 @@ class DexterConfig:
     WAKE_WORD: str = os.getenv("WAKE_WORD", "hey dexter")
     WAKE_WORD_SENSITIVITY: float = _to_float(os.getenv("WAKE_WORD_SENSITIVITY"), 0.5)
     WHISPER_MODEL: str = os.getenv("WHISPER_MODEL", "small")
-    TTS_VOICE: str = os.getenv("TTS_VOICE", "en-US-GuyNeural")
+    TTS_VOICE: str = os.getenv("TTS_VOICE", "en-US-ChristopherNeural")
     TTS_RATE: str = os.getenv("TTS_RATE", "+0%")
     GLOW_COLOR: str = os.getenv("GLOW_COLOR", "#FF4500")
     GLOW_OPACITY: int = _to_int(os.getenv("GLOW_OPACITY"), 180)
