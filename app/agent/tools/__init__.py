@@ -4,10 +4,15 @@ from typing import Any, Awaitable, Callable
 
 from app.agent.tools.browser import browser_tool
 from app.agent.tools.calendar import calendar_tool
+from app.agent.tools.desktop_control import desktop_control_tool
 from app.agent.tools.email import read_email_tool, send_email_tool
 from app.agent.tools.files import read_file_tool, write_file_tool
 from app.agent.tools.http_request import http_request_tool
+from app.agent.tools.screen_vision import screen_vision_tool
 from app.agent.tools.search import web_search_tool
+from app.agent.tools.shell import shell_tool
+from app.agent.tools.screenshot import screenshot_tool
+from app.agent.tools.system_info import system_info_tool
 
 TOOLS_REGISTRY: dict[str, Callable[..., Awaitable[str]]] = {
     "browser_tool": browser_tool,
@@ -18,6 +23,11 @@ TOOLS_REGISTRY: dict[str, Callable[..., Awaitable[str]]] = {
     "send_email_tool": send_email_tool,
     "read_email_tool": read_email_tool,
     "http_request_tool": http_request_tool,
+    "shell_tool": shell_tool,
+    "screenshot_tool": screenshot_tool,
+    "system_info_tool": system_info_tool,
+    "desktop_control_tool": desktop_control_tool,
+    "screen_vision_tool": screen_vision_tool,
 }
 
 
@@ -144,6 +154,80 @@ def get_tools_schema() -> list[dict[str, Any]]:
                     "body": {"type": "object"},
                 },
                 "required": ["url"],
+            },
+        },
+        {
+            "name": "shell_tool",
+            "description": "Execute a shell command with safety filters and environment-gated access.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "command": {"type": "string"},
+                },
+                "required": ["command"],
+            },
+        },
+        {
+            "name": "screenshot_tool",
+            "description": "Capture a full-screen screenshot and save it as PNG.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "save_path": {"type": "string"},
+                },
+            },
+        },
+        {
+            "name": "system_info_tool",
+            "description": "Read system metrics such as CPU, RAM, disk, processes, battery, and network usage.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "info_type": {
+                        "type": "string",
+                        "enum": ["cpu", "ram", "disk", "processes", "battery", "network", "all"],
+                        "default": "all",
+                    }
+                },
+            },
+        },
+        {
+            "name": "desktop_control_tool",
+            "description": "Perform desktop actions such as mouse movement/clicks, typing, and key presses.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "action": {
+                        "type": "string",
+                        "enum": [
+                            "move",
+                            "click",
+                            "right_click",
+                            "double_click",
+                            "type",
+                            "press",
+                            "scroll",
+                            "open_app",
+                        ],
+                    },
+                    "x": {"type": "integer"},
+                    "y": {"type": "integer"},
+                    "text": {"type": "string"},
+                    "key": {"type": "string"},
+                    "app_name": {"type": "string"},
+                },
+                "required": ["action"],
+            },
+        },
+        {
+            "name": "screen_vision_tool",
+            "description": "Analyze the current screen image with the configured vision-capable LLM.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "question": {"type": "string"},
+                },
+                "required": ["question"],
             },
         },
     ]
