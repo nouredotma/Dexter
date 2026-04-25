@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 import asyncio
+import os
+from pathlib import Path
 
 from PyQt6.QtCore import QTimer, Qt
 from PyQt6.QtWidgets import (
@@ -11,6 +13,7 @@ from PyQt6.QtWidgets import (
     QLineEdit,
     QListWidget,
     QMainWindow,
+    QMessageBox,
     QPushButton,
     QSplitter,
     QStackedWidget,
@@ -33,7 +36,13 @@ class DexterDashboard(QMainWindow):
         self._current_task_id: str | None = None
         self.setWindowTitle("Dexter Dashboard")
         self.resize(1100, 700)
-        self.setStyleSheet("QMainWindow{background:#1a1a1a;color:white;} QWidget{color:white;} QPushButton{background:#2a2a2a;} QLineEdit,QTextEdit,QListWidget,QTableWidget{background:#232323;color:white;}")
+        self.setStyleSheet(
+            "QMainWindow{background:#1a1a1a;color:white;} "
+            "QWidget{color:white;} "
+            "QPushButton{background:#2a2a2a; border:1px solid #444; padding:6px 14px; border-radius:4px;} "
+            "QPushButton:hover{border:1px solid #FF4500; background:#333;} "
+            "QLineEdit,QTextEdit,QListWidget,QTableWidget{background:#232323;color:white;border:1px solid #333;border-radius:4px;padding:4px;}"
+        )
 
         root = QWidget()
         self.setCentralWidget(root)
@@ -68,9 +77,36 @@ class DexterDashboard(QMainWindow):
         self._timer.timeout.connect(lambda: asyncio.create_task(self.refresh_all()))
         self._timer.start(5000)
 
+    # ----- Tasks Page (with prompt input) -----
+
     def _build_tasks_page(self) -> QWidget:
         page = QWidget()
         layout = QVBoxLayout(page)
+
+        # Prompt input row
+        input_row = QHBoxLayout()
+        self.prompt_input = QLineEdit()
+        self.prompt_input.setPlaceholderText("Type a task for Dexter... (press Enter or click Send)")
+        self.prompt_input.setMinimumHeight(36)
+        self.prompt_input.setStyleSheet(
+            "QLineEdit{font-size:14px; padding:8px; border:1px solid #555; border-radius:6px;}"
+            "QLineEdit:focus{border:1px solid #FF4500;}"
+        )
+        self.prompt_input.returnPressed.connect(lambda: asyncio.create_task(self._submit_prompt()))
+        input_row.addWidget(self.prompt_input)
+
+        self.send_btn = QPushButton("Send")
+        self.send_btn.setMinimumHeight(36)
+        self.send_btn.setStyleSheet(
+            "QPushButton{background:#FF4500; color:white; font-weight:bold; padding:8px 20px; border-radius:6px; border:none;}"
+            "QPushButton:hover{background:#FF5722;}"
+            "QPushButton:disabled{background:#666;}"
+        )
+        self.send_btn.clicked.connect(lambda: asyncio.create_task(self._submit_prompt()))
+        input_row.addWidget(self.send_btn)
+        layout.addLayout(input_row)
+
+        # Task list + details splitter
         splitter = QSplitter(Qt.Orientation.Vertical)
         layout.addWidget(splitter)
 
@@ -92,49 +128,169 @@ class DexterDashboard(QMainWindow):
         splitter.addWidget(details)
         return page
 
+    async def _submit_prompt(self) -> None:
+        prompt = self.prompt_input.text().strip()
+        if not prompt:
+            return
+        self.send_btn.setEnabled(False)
+        self.prompt_input.setEnabled(False)
+        try:
+            result = await self.api.submit_task(prompt)
+            if result and result.get("id"):
+                self.prompt_input.clear()
+                self.statusBar().showMessage(f"Task submitted: {str(result['id'])[:8]}...", 3000)
+                await self.refresh_tasks()
+            else:
+                self.statusBar().showMessage("Failed to submit task. Is the backend online?", 5000)
+        finally:
+            self.send_btn.setEnabled(True)
+            self.prompt_input.setEnabled(True)
+            self.prompt_input.setFocus()
+
+    # ----- Memory Page -----
+
     def _build_memory_page(self) -> QWidget:
         page = QWidget()
         layout = QVBoxLayout(page)
         self.memory_list = QListWidget()
         layout.addWidget(self.memory_list)
         btn_row = QHBoxLayout()
-        self.memory_delete_btn = QPushButton("Delete Selected")
-        self.memory_delete_btn.setEnabled(False)
-        self.memory_clear_btn = QPushButton("Clear All")
+        self.memory_clear_btn = QPushButton("Clear All Memory")
         self.memory_clear_btn.clicked.connect(lambda: asyncio.create_task(self._clear_memory()))
-        btn_row.addWidget(self.memory_delete_btn)
         btn_row.addWidget(self.memory_clear_btn)
         layout.addLayout(btn_row)
         return page
 
+    # ----- Tools Page (connected toggles) -----
+
     def _build_tools_page(self) -> QWidget:
         page = QWidget()
         layout = QVBoxLayout(page)
+        layout.addWidget(QLabel("Dangerous Tools"))
+        layout.addWidget(QLabel("Toggle these tools on/off. Changes are saved to .env and take effect on next backend restart."))
+
         self.shell_toggle = QCheckBox("Enable shell tool")
-        self.desktop_toggle = QCheckBox("Enable desktop control tool")
-        layout.addWidget(QLabel("Dangerous tools"))
+        self.shell_toggle.setChecked(os.getenv("ENABLE_SHELL_TOOL", "false").lower() == "true")
+        self.shell_toggle.toggled.connect(lambda checked: self._update_env_var("ENABLE_SHELL_TOOL", checked))
         layout.addWidget(self.shell_toggle)
+
+        self.desktop_toggle = QCheckBox("Enable desktop control tool")
+        self.desktop_toggle.setChecked(os.getenv("ENABLE_DESKTOP_CONTROL", "false").lower() == "true")
+        self.desktop_toggle.toggled.connect(lambda checked: self._update_env_var("ENABLE_DESKTOP_CONTROL", checked))
         layout.addWidget(self.desktop_toggle)
+
+        layout.addWidget(QLabel(""))
+        self.restart_note = QLabel("ℹ️ Changes require a backend restart to take effect.")
+        self.restart_note.setStyleSheet("color: #FF4500;")
+        self.restart_note.hide()
+        layout.addWidget(self.restart_note)
+
         layout.addStretch(1)
         return page
+
+    def _update_env_var(self, key: str, enabled: bool) -> None:
+        """Update a key in the .env file."""
+        value = "true" if enabled else "false"
+        env_path = self._find_env_file()
+        if not env_path:
+            return
+
+        lines = env_path.read_text(encoding="utf-8").splitlines()
+        found = False
+        for i, line in enumerate(lines):
+            if line.strip().startswith(f"{key}="):
+                lines[i] = f"{key}={value}"
+                found = True
+                break
+        if not found:
+            lines.append(f"{key}={value}")
+
+        env_path.write_text("\n".join(lines) + "\n", encoding="utf-8")
+        os.environ[key] = value
+        self.restart_note.show()
+
+    # ----- Settings Page (saves to .env) -----
 
     def _build_settings_page(self) -> QWidget:
         page = QWidget()
         layout = QFormLayout(page)
+
         self.api_url_edit = QLineEdit(self.config.DEXTER_API_URL)
         self.tts_voice_edit = QLineEdit(self.config.TTS_VOICE)
         self.whisper_model_edit = QLineEdit(self.config.WHISPER_MODEL)
-        self.wake_word_toggle = QCheckBox("Enable wake word")
         self.glow_color_edit = QLineEdit(self.config.GLOW_COLOR)
         self.auto_speak_toggle = QCheckBox("Auto-speak responses")
         self.auto_speak_toggle.setChecked(self.config.AUTO_SPEAK_RESPONSES)
+
         layout.addRow("API URL", self.api_url_edit)
         layout.addRow("TTS voice", self.tts_voice_edit)
         layout.addRow("Whisper model", self.whisper_model_edit)
-        layout.addRow("Wake word", self.wake_word_toggle)
         layout.addRow("Glow color", self.glow_color_edit)
         layout.addRow("Auto speak", self.auto_speak_toggle)
+
+        save_btn = QPushButton("Save Settings")
+        save_btn.setStyleSheet(
+            "QPushButton{background:#FF4500; color:white; font-weight:bold; padding:8px 20px; border-radius:6px; border:none;}"
+            "QPushButton:hover{background:#FF5722;}"
+        )
+        save_btn.clicked.connect(self._save_settings)
+        layout.addRow("", save_btn)
+
+        self.settings_status = QLabel("")
+        self.settings_status.setStyleSheet("color: #00cc66;")
+        layout.addRow("", self.settings_status)
         return page
+
+    def _save_settings(self) -> None:
+        """Persist settings to .env file."""
+        env_path = self._find_env_file()
+        if not env_path:
+            self.settings_status.setText("⚠️ Could not find .env file")
+            self.settings_status.setStyleSheet("color: #cc3333;")
+            return
+
+        settings_map = {
+            "DEXTER_API_URL": self.api_url_edit.text().strip(),
+            "TTS_VOICE": self.tts_voice_edit.text().strip(),
+            "WHISPER_MODEL": self.whisper_model_edit.text().strip(),
+            "GLOW_COLOR": self.glow_color_edit.text().strip(),
+            "AUTO_SPEAK_RESPONSES": "true" if self.auto_speak_toggle.isChecked() else "false",
+        }
+
+        lines = env_path.read_text(encoding="utf-8").splitlines()
+        for key, value in settings_map.items():
+            found = False
+            for i, line in enumerate(lines):
+                if line.strip().startswith(f"{key}="):
+                    lines[i] = f"{key}={value}"
+                    found = True
+                    break
+            if not found:
+                lines.append(f"{key}={value}")
+
+        env_path.write_text("\n".join(lines) + "\n", encoding="utf-8")
+
+        # Update runtime config
+        self.config.TTS_VOICE = settings_map["TTS_VOICE"]
+        self.config.WHISPER_MODEL = settings_map["WHISPER_MODEL"]
+        self.config.GLOW_COLOR = settings_map["GLOW_COLOR"]
+        self.config.AUTO_SPEAK_RESPONSES = self.auto_speak_toggle.isChecked()
+
+        self.settings_status.setText("✅ Settings saved! Some changes need a restart.")
+        self.settings_status.setStyleSheet("color: #00cc66;")
+
+    def _find_env_file(self) -> Path | None:
+        """Find the .env file relative to the project root."""
+        candidates = [
+            Path(__file__).resolve().parent.parent / ".env",
+            Path.cwd() / ".env",
+        ]
+        for p in candidates:
+            if p.exists():
+                return p
+        return None
+
+    # ----- Data refresh -----
 
     async def _clear_memory(self) -> None:
         await self.api.clear_memory()
