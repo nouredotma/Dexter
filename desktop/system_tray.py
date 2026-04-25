@@ -1,10 +1,12 @@
 from __future__ import annotations
 
 import asyncio
+import subprocess
+import sys
 
 from PyQt6.QtCore import Qt
 from PyQt6.QtGui import QColor, QIcon, QPainter, QPixmap
-from PyQt6.QtWidgets import QMenu, QMessageBox, QSystemTrayIcon
+from PyQt6.QtWidgets import QMenu, QSystemTrayIcon
 
 from desktop.api_client import DexterAPIClient
 
@@ -47,8 +49,6 @@ class DexterTrayIcon(QSystemTrayIcon):
         menu.addSeparator()
         self._backend_label = menu.addAction("Backend Status: Unknown")
         self._backend_label.setEnabled(False)
-        restart_action = menu.addAction("Restart Backend (docker-compose up -d)")
-        restart_action.triggered.connect(self._restart_backend)
 
         menu.addSeparator()
         quit_action = menu.addAction("Quit")
@@ -96,12 +96,6 @@ class DexterTrayIcon(QSystemTrayIcon):
         else:
             self.voice_controller.disable_wake_word()
             self.wake_action.setText("Wake Word OFF")
-
-    def _restart_backend(self) -> None:
-        import subprocess
-
-        subprocess.Popen("docker-compose up -d", shell=True)
-        self.showMessage("Dexter", "Backend restart triggered.", QSystemTrayIcon.MessageIcon.Information)
 
     def _quit_app(self) -> None:
         from PyQt6.QtWidgets import QApplication

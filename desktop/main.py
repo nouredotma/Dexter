@@ -15,12 +15,6 @@ from desktop.system_tray import DexterTrayIcon
 from desktop.voice_controller import VoiceController
 
 
-class _HideOnCloseWindow(QMainWindow):
-    def closeEvent(self, event):  # noqa: N802
-        event.ignore()
-        self.hide()
-
-
 async def _init_app(app: QApplication) -> tuple[DexterAPIClient, DexterTrayIcon]:
     config = DexterConfig()
     api = DexterAPIClient(config.DEXTER_API_URL)
@@ -29,8 +23,6 @@ async def _init_app(app: QApplication) -> tuple[DexterAPIClient, DexterTrayIcon]
     overlay.set_state(OverlayState.IDLE)
 
     dashboard = DexterDashboard(api, config)
-    dashboard.setWindowFlag(dashboard.windowFlags())  # keep object alive
-    dashboard.hide()
     dashboard.closeEvent = lambda event: (event.ignore(), dashboard.hide())
 
     controller = VoiceController(config, overlay, api)
@@ -40,9 +32,15 @@ async def _init_app(app: QApplication) -> tuple[DexterAPIClient, DexterTrayIcon]
 
     ok = await api.health_check()
     if not ok:
-        tray.showMessage("Dexter", "Backend is offline. Start Docker services first.", tray.MessageIcon.Warning)
+        tray.showMessage("Dexter", "Backend is not responding. Check if uvicorn is running.", tray.MessageIcon.Warning)
     await tray.update_backend_status()
     await dashboard.refresh_all()
+
+    # Auto-open the dashboard on launch
+    dashboard.show()
+    dashboard.raise_()
+    dashboard.activateWindow()
+
     return api, tray
 
 

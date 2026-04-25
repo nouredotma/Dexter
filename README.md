@@ -66,6 +66,14 @@ The API listens on `http://localhost:8000`. An orange icon appears in your syste
 | **Wake word** | Right-click tray → toggle "Wake Word ON" → say "hey dexter" |
 | **API** | `POST http://localhost:8000/tasks/` with `{"prompt": "..."}` |
 
+## How to stop
+
+Three ways to stop Dexter:
+
+1. **Tray icon** — Right-click the orange icon → **Quit**
+2. **Stop script** — Double-click `stop_dexter.bat`
+3. **Manual** — Open Task Manager → find `pythonw.exe` → End Task
+
 ## Architecture
 
 ```
