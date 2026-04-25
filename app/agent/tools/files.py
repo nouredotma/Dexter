@@ -37,6 +37,20 @@ async def write_file_tool(path: str, content: str, mode: str = "w") -> str:
         return "error: mode must be 'w' or 'a'"
     if len(content) > _MAX_WRITE_CHARS:
         return f"error: content too large (max {_MAX_WRITE_CHARS} chars)"
+
+    # If overwriting an existing file, require confirmation
+    if mode == "w" and target.exists() and target.is_file():
+        existing_size = target.stat().st_size
+        return (
+            f"⚠️ CONFIRMATION REQUIRED: File already exists and will be overwritten.\n"
+            f"File: {target}\n"
+            f"Current size: {existing_size} bytes\n"
+            f"New content size: {len(content)} chars\n\n"
+            f"You MUST stop here and tell the user that this file already exists, "
+            f"show them the file path, and ask for their explicit approval before overwriting. "
+            f"Do NOT retry without the user's permission."
+        )
+
     target.parent.mkdir(parents=True, exist_ok=True)
     if mode == "w":
         # Atomic overwrite to reduce risk of partial writes.
