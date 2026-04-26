@@ -9,17 +9,19 @@ Personal AI agent that lives on your desktop. Voice-controlled, fully autonomous
 
 ## Features
 
-- 🎙️ **Voice control** — Talk to Dexter with wake word ("hey dexter") or push-to-talk
-- 🧠 **Episodic memory** — Remembers past interactions using vector search (Qdrant embedded)
-- 🛠️ **Tool use** — Shell commands, desktop control, file operations, web search, browser, email, calendar, screenshots
-- 🛡️ **Safety system** — Destructive actions (delete, shutdown, format) require your explicit confirmation
-- 📊 **Dashboard** — Built-in UI to type prompts, view tasks, manage memory, toggle tools
-- ⚡ **Instant startup** — No Docker, no servers, just double-click and go (~3 seconds)
+- 🎙️ **Voice control** — Talk to Dexter with wake word ("hi dexter") or push-to-talk.
+- 🧠 **Episodic memory** — Remembers past interactions using vector search (Qdrant embedded).
+- 🛠️ **Tool use** — Shell commands, desktop control, file operations, web search, browser, email, calendar, screenshots.
+- 🛡️ **Safety system** — Destructive actions (delete, shutdown, format) require your explicit confirmation.
+- 📊 **Dashboard** — Built-in UI to type prompts, view tasks, manage memory, toggle tools.
+- ⚡ **Instant startup** — No Docker, no servers, just double-click and go (~3 seconds).
+- ⌨️ **Global Hotkey** — Instant activation from anywhere with `Ctrl + Alt + D`.
+- 🔄 **Conversational Mode** — Follow-up window for natural multi-turn dialogues without re-waking.
 
 ## Prerequisites
 
 - **Python 3.12+** — [Download](https://www.python.org/downloads/)
-- **Windows 10/11** (desktop overlay and voice features are Windows-specific)
+- **Windows 10/11** (desktop overlay and voice features are Windows-specific).
 
 That's it. No Docker, no PostgreSQL, no Redis, no Node.js.
 
@@ -59,12 +61,24 @@ The API listens on `http://localhost:8000`. An orange icon appears in your syste
 
 ## How to use
 
-| Method | How |
-|--------|-----|
+| Method | Interaction |
+|--------|-------------|
+| **Global Hotkey** | Press `Ctrl + Alt + D` to start listening immediately |
 | **Dashboard** | Double-click tray icon → type a prompt → click Send |
 | **Voice** | Right-click tray → "Listen Now" → speak |
-| **Wake word** | Right-click tray → toggle "Wake Word ON" → say "hey dexter" |
+| **Wake word** | Say "hi dexter" (ensure toggle "Wake Word ON" is active) |
 | **API** | `POST http://localhost:8000/tasks/` with `{"prompt": "..."}` |
+
+## Visual & Audio Feedback
+
+Dexter uses an ambient screen glow and programmatic audio cues (earcons) to indicate its state:
+
+| State | Glow Color | Description |
+|-------|------------|-------------|
+| **Listening** | 🔵 Blue | Dexter is actively listening to your voice input. |
+| **Thinking** | 🟠 Orange | The agent is processing your request and running tools. |
+| **Speaking** | 🟢 Green | Dexter is reading the response back to you. |
+| **Conversation** | 🟣 Purple | Follow-up window active — speak again without a wake word. |
 
 ## How to stop
 
@@ -108,20 +122,11 @@ Dexter has a 3-layer safety system to prevent destructive actions:
 | **Confirmation required** | `rm`, `del`, `shutdown`, `reboot`, file overwrites, etc. → agent stops and asks you first |
 | **System prompt** | LLM is instructed to never retry or work around a blocked command |
 
-## API overview
-
-| Area | Endpoint | Notes |
-|------|----------|-------|
-| Health | `GET /health` | Status check |
-| Tasks | `POST /tasks/`, `GET /tasks/`, `GET /tasks/{id}`, `DELETE /tasks/{id}`, `GET /tasks/{id}/logs` | Task management |
-| WebSocket | `WS /ws/tasks/{task_id}` | Live task progress updates |
-| Memory | `GET /memory/`, `DELETE /memory/` | Qdrant-backed episodic memory |
-
 ## LLM configuration
 
 Dexter uses a single OpenAI-compatible LLM provider configured through `.env`:
 
-- Default: **Gemini 2.5 Flash**
+- Default: **Gemini 2.5 Flash** (via Google AI SDK)
 - To switch providers, update these 3 values:
   - `LLM_API_KEY` — your API key
   - `LLM_MODEL` — model name (e.g. `gpt-4o`, `claude-3-sonnet`)
@@ -157,7 +162,8 @@ Dexter uses a single OpenAI-compatible LLM provider configured through `.env`:
 
 ```
 Dexter/
-├── .env                        # Config (API keys, settings)
+├── .env                        # Active config (API keys, settings)
+├── .env.example                # Template for configuration
 ├── start_dexter.bat            # One-click launcher
 ├── requirements.txt            # Backend Python dependencies
 ├── app/
